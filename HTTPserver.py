@@ -10,10 +10,17 @@ class CurrencyRate(BaseModel):
     currency_date: datetime.date = datetime.date.today()
 
 
+@app.get('/')
+async def read_main():
+    return {"msg": "Hello World"}
+
 @app.post('/post/currency/{currency_code}')
 def post(currency_code: str, currency_rate: CurrencyRate):
-    storage[currency_code] = {currency_rate.currency_date: currency_rate.rate}
-    return storage[currency_code]
+    if currency_rate.rate > 0 and isinstance(currency_code, str):
+        storage[currency_code] = {currency_rate.currency_date: currency_rate.rate}
+        return {'currency_code': currency_code, 'currency_rate': currency_rate}
+    else:
+        return {'error': 'Currency rate should be bigger than 0, currency_code should be string'}
 
 
 @app.get('/get/currency/{currency_code}/')
@@ -22,7 +29,7 @@ def get_currency(currency_code: str, date: datetime.date = datetime.date.today()
     if currency_code in storage and date in storage[currency_code]:
         return storage[currency_code][date]
     else:
-        return 'Sorry, there is no info about' + currency_code + date + 'rate'
+        return 'Sorry, there is no info about ' + currency_code + ' ' + str(date) + ' rate'
 
 
 @app.get('/get/from/{from_currency_code}/to/{to_currency_code}/')
