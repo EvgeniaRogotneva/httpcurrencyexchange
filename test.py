@@ -9,11 +9,10 @@ import datetime
 class TestCurrencyExchange(unittest.TestCase):
 
     def setUp(self) -> None:
-        pass
+        storage.clear()
 
     def tearDown(self) -> None:
-        storage = {}
-        print('we are here')
+        pass
 
     def test_get_main(self):
         with TestClient(app) as client:
@@ -109,7 +108,6 @@ class TestCurrencyExchange(unittest.TestCase):
         with TestClient(app) as client:
             response = client.get('/get/currency/AUD')
             assert response.status_code == 200
-            print(response.json())
             assert response.json() == {'error': 'Sorry, there is no info about AUD '
                                                 + str(datetime.date.today()) + ' rate'}
         self.tearDown()
@@ -138,4 +136,25 @@ class TestCurrencyExchange(unittest.TestCase):
             assert response.json() == {'error': 'Currency rate should be bigger than 0, '
                                                 'currency_code should be in follow format: AUD, RUB, USD, EUR'}
         self.tearDown()
+
+    def test_check_correct_additional_two_dates(self):
+        with TestClient(app) as client:
+            '''post currency's rates'''
+            response = client.post("/post/currency/USD", json={"rate": 80.5624,
+                                                               "currency_date": "2021-02-06"})
+            assert response.status_code == 200
+            response = client.post("/post/currency/USD", json={"rate": 76.0801,
+                                                               "currency_date": "2021-02-05"})
+            assert response.status_code == 200
+
+            response = client.get('/get/currency/USD/date/2021-02-06')
+            assert response.status_code == 200
+            assert response.json() == {"currency_code": "USD", "currency_rate": 80.5624,
+                                       "date": "2021-02-06"}
+
+            response = client.get('/get/currency/USD/date/2021-02-05')
+            assert response.status_code == 200
+            assert response.json() == {"currency_code": "USD", "currency_rate": 76.0801,
+                                       "date": "2021-02-05"}
+
 

@@ -8,7 +8,13 @@ app = FastAPI()
 
 class CurrencyRate(BaseModel):
     rate: float
-    currency_date: datetime.date = datetime.date.today()
+    currency_date: datetime.date = None
+
+
+def check_date(date):
+    if date is None:
+        return datetime.date.today()
+    return date
 
 
 @app.get('/')
@@ -18,9 +24,13 @@ async def read_main():
 
 @app.post('/post/currency/{currency_code}')
 def post(currency_code: str, currency_rate: CurrencyRate):
+    date = check_date(currency_rate.currency_date)
     if currency_rate.rate > 0 and currency_code in all_currencies:
-        storage[currency_code] = {currency_rate.currency_date: currency_rate.rate}
-        return {'currency_code': currency_code, 'currency_rate': currency_rate.rate, 'date': currency_rate.currency_date}
+        if currency_code in storage:
+            storage[currency_code][date] = currency_rate.rate
+        else:
+            storage[currency_code] = {date: currency_rate.rate}
+        return {'currency_code': currency_code, 'currency_rate': currency_rate.rate, 'date': date}
     else:
         return {'error': 'Currency rate should be bigger than 0, currency_code should be in follow format: '
                          'AUD, RUB, USD, EUR'}
@@ -28,7 +38,8 @@ def post(currency_code: str, currency_rate: CurrencyRate):
 
 @app.get('/get/currency/{currency_code}/')
 @app.get('/get/currency/{currency_code}/date/{date}/')
-def get_currency(currency_code: str, date: datetime.date = datetime.date.today()):
+def get_currency(currency_code: str, date: datetime.date = None):
+    date = check_date(date)
     if currency_code in storage and date in storage[currency_code]:
         return {'currency_code': currency_code, 'currency_rate': storage[currency_code][date], 'date': date}
     else:
@@ -37,7 +48,8 @@ def get_currency(currency_code: str, date: datetime.date = datetime.date.today()
 
 @app.get('/get/from/{from_currency_code}/to/{to_currency_code}/')
 @app.get('/get/from/{from_currency_code}/to/{to_currency_code}/date/{date}')
-def get_rate_for_pair(from_currency_code: str, to_currency_code: str, date: datetime.date = datetime.date.today()):
+def get_rate_for_pair(from_currency_code: str, to_currency_code: str, date: datetime.date = None):
+    date = check_date(date)
     if from_currency_code in storage and to_currency_code in storage:
         if date in storage[from_currency_code] and date in storage[to_currency_code]:
             rate = storage[from_currency_code][date] / storage[to_currency_code][date]
